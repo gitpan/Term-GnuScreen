@@ -7,12 +7,13 @@ WriteMakefile
           'EXE_FILES' => [],
           'VERSION_FROM' => 'lib/Term/GnuScreen.pm',
           'PREREQ_PM' => {
+                           'IO::CaptureOutput' => 0,
+                           'File::Which' => 0,
                            'Test::More' => 0,
+                           'IPC::System::Simple' => 0,
                            'Sub::Install' => 0,
                            'autodie' => 0,
-                           'IO::CaptureOutput' => 0,
                            'File::Temp' => 0,
-                           'File::Which' => 0,
                            'Moose' => 0
                          }
         )

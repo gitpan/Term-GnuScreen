@@ -14,11 +14,15 @@ my $builder = Module::Build->new(
         autodie             => 0,
         'File::Which'       => 0,
         'IO::CaptureOutput' => 0,
+	'IPC::System::Simple' => 0,
     },
     build_requires     => { 'Test::More' => 0, },
     add_to_cleanup     => ['Term-GnuScreen-*'],
     create_makefile_pl => 'traditional',
     create_readme      => 1,
+    meta_merge         => {
+        resources => { repository => 'http://github.com/mdom/term-gnuscreen', },
+    }
 );
 
 $builder->create_build_script();
