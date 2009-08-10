@@ -7,7 +7,7 @@ use autodie qw(:all);
 use File::Which;
 use IO::CaptureOutput qw(capture);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 BEGIN {
 
@@ -50,18 +50,40 @@ BEGIN {
 }
 
 has session    => (is => 'rw', isa => 'Str' );
-has window     => (is => 'rw', isa => 'Str' );
-has executable => (is => 'rw', isa => 'Str', default => sub { which("screen") } );
+has window     => (is => 'rw', isa => 'Str',  default => '0' );
+has executable => (is => 'rw', isa => 'Str',  default => sub { which("screen") } );
+has create     => (is => 'ro', isa => 'Bool', default => 0 );
+has debugging  => (is => 'rw', isa => 'Bool', default => 0 );
+
+sub BUILD {
+	my ($self) = @_;
+	if ($self->create) {
+		if (!$self->session) {
+			$self->session("term_gnuscreen.$$" . int(rand(10000)));
+		}
+		$self->call_screen('-m','-d');
+	}
+}
 
 sub send_command {
 	my ($self,$cmd,@args) = @_;
+	$self->call_screen('-X', $cmd, @args) if $cmd;
+}
+
+sub call_screen {
+	my ($self,@parameter) = @_;
 	my @screencmd = ( $self->executable );
-	push @screencmd, '-S', $self->session if $self->session;
-	push @screencmd, '-p', $self->window if $self->window;
+	push @screencmd, '-S', $self->session if defined $self->session;
+	push @screencmd, '-p', $self->window  if defined $self->window;
+	push @screencmd, @parameter;
+
+	if ($self->debugging) {
+		print STDERR "Command: " . join(" ",@screencmd) . "\n";
+	}
 
 	my ($stdout,$stderr);
 	eval { 
-		capture { system(@screencmd, '-X', $cmd, @args) } \$stdout, \$stderr;
+		capture { system(@screencmd) } \$stdout, \$stderr;
 		1;
 	} or do {
 		my $err;# = $!;
@@ -92,7 +114,7 @@ Term::GnuScreen - Control GNU screen via perl
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =head1 SYNOPSIS
 
@@ -105,6 +127,40 @@ session via its command line interface.
     $screen->windowlist;
     $screen->hardcopy('/tmp/my_hardcopy');
 
+=head1 CONSTRUCTION
+
+=over 4
+
+=item session
+
+Sets the name of the screen session to send commands to. If you also
+set C<create> to a true value, this will become the new name of your
+screen session. See I<-S> option for screen for a further discussion of
+this argument.
+
+=item create
+
+If create is set to a true value, a new screen session is created
+and detached automatically. If you do not provide a session name,
+this module generates one by calling C<"term_gnuscreen" . $$
+. int(rand(10000))>. Settings this value after object creation has no
+effect at the moment.
+
+The newly created session will not be terminated after programm execution.
+
+=item window
+
+Preselects a window to send a command via the a specific window. Defaults
+to 0. See I<-p> option for screen for a further discussion of this
+argument.
+
+=item executable
+
+Return or set the screen binary to call. Defaults to the binary found
+by File::Which::which.
+
+=back
+
 =head1 METHODS
 
 Term::GnuScreen implements all commands as stated in the texinfo document
@@ -112,17 +168,28 @@ shipped with GNU screen. To call a commands, it's send via GNU screens -X
 paramter to the first running screen session and its current window. You
 can change session and window with the according object methods and
 construction paramters. Unless listed here, all remaining arguments are
-handled over to screen.
+handled over to screen without further modification.
+
+The five commands bind, meta, chdir, exec and umask are prefixed with a
+I<s> ( sbind, smeta, schdir, sexec and sumas ) to distinguish them from
+the built-ins with the same name.
+
+=head2 call_screen
+
+This command is the working horse of Term::GnuScreen. It simply builds
+the command line to call and execute it.
 
 =head2 send_command
 
-This command is the working horse of Term::GnuScreen. It simply build
-the command line to call and add all the supplied arguments to screens -X.
+Calls call_screen with the I<-X> and all supplied paramters. Most
+functions are implemented by this method.
 
 =head2 hardcopy
 
 Write a hardcopy of the current window to a temporary file and returns
-the filename unless the filename is supplied as first argument.
+the filename unless the filename is supplied as first argument. If
+the supplied filename is not absolute, the file is written relative to
+C<hardcopydir>.
 
 =head1 ERROR HANDLING
 
@@ -134,19 +201,26 @@ most times) are provided as error message for further investigation.
 
 Mario Domgoergen, C<< <dom at math.uni-bonn.de> >>
 
-=head1 BUGS
+=head1 BUGS AND LIMITATIONS
 
-Please report any bugs or feature requests to C<bug-term-gnuscreen at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Term-GnuScreen>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+It seems not to be possible to question a specific screen session
+about its state, so this module basically just sends commands to a
+screen session without knowing if the command succeeded or was at least
+syntactically corrent.
 
+This module needs a lot more testing.
+
+Please report any bugs or feature requests to
+C<bug-term-gnuscreen at rt.cpan.org>, or through the web interface
+at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Term-GnuScreen>.
+I will be notified, and then you'll automatically be notified of progress
+on your bug as I make changes.
 
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc Term::GnuScreen
-
 
 You can also look for information at:
 
@@ -174,7 +248,6 @@ L<http://search.cpan.org/dist/Term-GnuScreen>
 =head1 ACKNOWLEDGEMENTS
 
 L<screen>
-
 
 =head1 COPYRIGHT & LICENSE
 
