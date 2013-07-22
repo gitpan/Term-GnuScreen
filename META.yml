@@ -1,28 +1,30 @@
 ---
-name: Term-GnuScreen
-version: 0.03
+abstract: 'control GNU screen'
 author:
   - 'Mario Domgoergen <dom@math.uni-bonn.de>'
-abstract: Control GNU screen via perl
+build_requires:
+  Test::More: 0
+configure_requires:
+  Module::Build: 0.38
+dynamic_config: 1
+generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.131560'
 license: perl
-resources:
-  license: ~
-  repository: http://github.com/mdom/term-gnuscreen
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Term-GnuScreen
+provides:
+  Term::GnuScreen:
+    file: lib/Term/GnuScreen.pm
+    version: 0.04
 requires:
   File::Temp: 0
   File::Which: 0
   IO::CaptureOutput: 0
   IPC::System::Simple: 0
-  Moose: 0
-  Sub::Install: 0
+  Moo: 0
   autodie: 0
-build_requires:
-  Test::More: 0
-provides:
-  Term::GnuScreen:
-    file: lib/Term/GnuScreen.pm
-    version: 0.03
-generated_by: Module::Build version 0.32
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
+resources:
+  license: http://dev.perl.org/licenses/
+  repository: http://github.com/mdom/term-gnuscreen
+version: 0.04

@@ -1,15 +1,16 @@
 package Term::GnuScreen;
 
-use Moose;
-use Sub::Install qw(install_sub);
+use Moo;
 use File::Temp qw(tmpnam);
 use autodie qw(:all);
 use File::Which;
 use IO::CaptureOutput qw(capture);
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 BEGIN {
+
+	no strict 'refs';
 
 	my @commands = ( qw( acladd aclchg acldel aclgrp aclumask activity addacl allpartial
 	altscreen at attrcolor autodetach autonuke backtick bce bell_msg 
@@ -21,7 +22,7 @@ BEGIN {
 	defutf8 defwrap defwritelock defzombie detach digraph dinfo displays
 	dumptermcap echo encoding escape eval fit flow focus gr 
 	hardcopy_append hardcopydir hardstatus height help history hstatus idle
-	ignorecase info ins_reg kill lastmsg license lockscreen log logfile login
+	ignorecase info ins_reg lastmsg license lockscreen log logfile login
 	logtstamp mapdefault mapnotnext maptimeout markkeys maxwin monitor
 	msgminwait msgwait multiuser nethack next nonblock number obuflimit only
 	other partial password paste pastefont pow_break pow_detach pow_detach_msg
@@ -33,27 +34,21 @@ BEGIN {
 	width windowlist windows wrap writebuf writelock xoff xon zmodem zombie ) );
 
 	for my $name (@commands) {
-		install_sub({
-			code => sub { shift->send_command($name,@_) },
-			as   => $name
-		});
+		*{__PACKAGE__ . "::$name"} = sub { shift->send_command($name,@_) }
 	}
 
-	my @rcommands = ( qw( bind meta chdir exec umask) );
+	my @rcommands = ( qw( bind kill meta chdir exec umask) );
 
 	for my $name (@rcommands) {
-		install_sub({
-			code => sub { shift->send_command($name,@_) },
-			as   => "s$name"
-		});
+		*{__PACKAGE__ . "::s$name"} = sub { shift->send_command($name,@_) }
 	}
 }
 
-has session    => (is => 'rw', isa => 'Str' );
-has window     => (is => 'rw', isa => 'Str',  default => '0' );
-has executable => (is => 'rw', isa => 'Str',  default => sub { which("screen") } );
-has create     => (is => 'ro', isa => 'Bool', default => 0 );
-has debugging  => (is => 'rw', isa => 'Bool', default => 0 );
+has session    => (is => 'rw'  );
+has window     => (is => 'rw', default => 0 );
+has executable => (is => 'rw', default => sub { which("screen") } );
+has create     => (is => 'ro', default => 0 );
+has debugging  => (is => 'rw', default => 0 );
 
 sub BUILD {
 	my ($self) = @_;
@@ -63,11 +58,14 @@ sub BUILD {
 		}
 		$self->call_screen('-m','-d');
 	}
+	return;
 }
 
 sub send_command {
 	my ($self,$cmd,@args) = @_;
-	$self->call_screen('-X', $cmd, @args) if $cmd;
+	die "No command supplied while trying to call screen via -X."
+		if !$cmd;
+	return $self->call_screen('-X', $cmd, @args) if $cmd;
 }
 
 sub call_screen {
@@ -107,14 +105,13 @@ sub hardcopy {
 
 __END__
 
-
 =head1 NAME
 
-Term::GnuScreen - Control GNU screen via perl
+Term::GnuScreen - control GNU screen
 
 =head1 VERSION
 
-Version 0.03
+Version 0.04
 
 =head1 SYNOPSIS
 
@@ -133,46 +130,49 @@ session via its command line interface.
 
 =item session
 
-Sets the name of the screen session to send commands to. If you also
-set C<create> to a true value, this will become the new name of your
+Sets the name of the screen session to which commands are send. If you
+also set C<create> to a true value, this will become the new name of your
 screen session. See I<-S> option for screen for a further discussion of
 this argument.
 
 =item create
 
 If create is set to a true value, a new screen session is created
-and detached automatically. If you do not provide a session name,
-this module generates one by calling C<"term_gnuscreen" . $$
+and detached automatically. If you do not provide a session name via
+I<session>, this module generates one by calling C<"term_gnuscreen" . $$
 . int(rand(10000))>. Settings this value after object creation has no
 effect at the moment.
 
-The newly created session will not be terminated after programm execution.
+The newly created session will not be terminated after program execution.
 
 =item window
 
-Preselects a window to send a command via the a specific window. Defaults
-to 0. See I<-p> option for screen for a further discussion of this
-argument.
+Preselects a window. Defaults to 0. See I<-p> option of screen for a
+further discussion of this argument.
 
 =item executable
 
 Return or set the screen binary to call. Defaults to the binary found
-by File::Which::which.
+by C<File::Which::which("screen")>.
+
+=item debugging
+
+If debugging is set to a true value, all commands are printed to STDERR.
 
 =back
 
 =head1 METHODS
 
 Term::GnuScreen implements all commands as stated in the texinfo document
-shipped with GNU screen. To call a commands, it's send via GNU screens -X
-paramter to the first running screen session and its current window. You
-can change session and window with the according object methods and
-construction paramters. Unless listed here, all remaining arguments are
-handled over to screen without further modification.
+shipped with GNU screen. Whenever you call a command it is send via GNU
+screens -X parameter to the first running screen session and its current
+window. You can change session and window with the according object
+methods and construction parameters. Unless listed here, all remaining
+arguments are handed over to screen without further modification.
 
-The five commands bind, meta, chdir, exec and umask are prefixed with a
-I<s> ( sbind, smeta, schdir, sexec and sumas ) to distinguish them from
-the built-ins with the same name.
+The five commands bind, kill, meta, chdir, exec and umask are prefixed
+with a I<s> (sbind, smeta, schdir, sexec and sumask) to distinguish them
+from the built-ins with the same name.
 
 =head2 call_screen
 
@@ -181,7 +181,7 @@ the command line to call and execute it.
 
 =head2 send_command
 
-Calls call_screen with the I<-X> and all supplied paramters. Most
+Calls call_screen with the I<-X> and all supplied parameters. Most
 functions are implemented by this method.
 
 =head2 hardcopy
@@ -199,14 +199,14 @@ most times) are provided as error message for further investigation.
 
 =head1 AUTHOR
 
-Mario Domgoergen, C<< <dom at math.uni-bonn.de> >>
+Mario Domgoergen E<lt>mdom@cpan.orgE<gt>
 
 =head1 BUGS AND LIMITATIONS
 
 It seems not to be possible to question a specific screen session
 about its state, so this module basically just sends commands to a
-screen session without knowing if the command succeeded or was at least
-syntactically corrent.
+screen session without knowing if the command succeeded or was even
+syntactically correct.
 
 This module needs a lot more testing.
 
@@ -251,7 +251,7 @@ L<screen>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009 Mario Domgoergen, all rights reserved.
+Copyright 2013 Mario Domgoergen, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
