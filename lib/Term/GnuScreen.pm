@@ -6,7 +6,7 @@ use autodie qw(:all);
 use File::Which;
 use IO::CaptureOutput qw(capture);
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 BEGIN {
 
@@ -45,10 +45,10 @@ BEGIN {
 }
 
 has session    => (is => 'rw'  );
-has window     => (is => 'rw', default => 0 );
+has window     => (is => 'rw', default => sub { 0 } );
 has executable => (is => 'rw', default => sub { which("screen") } );
-has create     => (is => 'ro', default => 0 );
-has debugging  => (is => 'rw', default => 0 );
+has create     => (is => 'ro', default => sub { 0 } );
+has debugging  => (is => 'rw', default => sub { 0 } );
 
 sub BUILD {
 	my ($self) = @_;
@@ -111,7 +111,7 @@ Term::GnuScreen - control GNU screen
 
 =head1 VERSION
 
-Version 0.04
+Version 0.05
 
 =head1 SYNOPSIS
 

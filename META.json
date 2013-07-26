@@ -38,7 +38,7 @@
    "provides" : {
       "Term::GnuScreen" : {
          "file" : "lib/Term/GnuScreen.pm",
-         "version" : "0.04"
+         "version" : "0.05"
       }
    },
    "release_status" : "stable",
@@ -50,5 +50,5 @@
          "url" : "http://github.com/mdom/term-gnuscreen"
       }
    },
-   "version" : "0.04"
+   "version" : "0.05"
 }
